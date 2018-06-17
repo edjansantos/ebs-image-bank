@@ -18,7 +18,7 @@ module.exports = () => {
         }
     };
 
-    const _getCustomFieldsMetadata = () => ['id_category', 'tags'];
+    const _getCustomFieldsMetadata = () => ['category', 'tags', 'description'];
 
     const _getAvailableExtensions = () => ['jpg','jpeg','png','gif'];
 

@@ -1,11 +1,15 @@
 module.exports = (app) => {
     const multer = require('multer'),
+        db = require('./database'),
+        uuidv1 = require('uuid/v1'),
         storage = multer.diskStorage({
             destination: function (req, file, cb) {
                 cb(null, app.ebsSettings.UPLOAD_PATH)
             },
             filename: function (req, file, cb) {
-                cb(null, file.originalname.toLowerCase());
+                const _filename = file.originalname.toLowerCase(),
+                    _arrayFileName = _filename.split('.');
+                cb(null, `${uuidv1()}.${_arrayFileName[_arrayFileName.length - 1]}`);
             }
         }),
         fs = require('fs'),
@@ -21,29 +25,27 @@ module.exports = (app) => {
         try{
             upload(req, res, (err) => {
                 if (err) return res.status(500).send({success: false, exception: err});
-                const __metadataFilename = utils.generateMetadataFilename(req.file.originalname);
 
                 try {
                     let metadataContent = {};
                     if(req.query) {
+                        metadataContent = {
+                            filename: req.file.filename,
+                            tags: (req.query.tags ? req.query.tags.split(',') : undefined),
+                            description: req.query.description
+                        }
 
-                        const __METADATAFIELDS = utils.getCustomFieldsMetadata();
+                        const ImageSchema = require('./models/image')(db),
+                        ImageModel = new (db.model('Image', ImageSchema))(metadataContent);
 
-                        __METADATAFIELDS.forEach((field) => {
-                            metadataContent[field] = (field === 'tags') ? req.query[field].split(',') : req.query[field];
-                        });
+                        ImageModel.save();
                     }
 
-                    fs.writeFileSync(app.ebsSettings.UPLOAD_PATH + __metadataFilename, JSON.stringify(metadataContent), 'utf-8');
                     res.send({success: true});
                 } catch(error) {
-                    const __IMAGEPATH = app.ebsSettings.UPLOAD_PATH + req.file.originalname,
-                          __METADATAPATH = app.ebsSettings.UPLOAD_PATH + __metadataFilename;
+                    const __IMAGEPATH = app.ebsSettings.UPLOAD_PATH + req.file.originalname;
                     if (fs.existsSync(__IMAGEPATH)) 
                         fs.unlinkSync(__IMAGEPATH);
-
-                    if (fs.existsSync(__METADATAPATH)) 
-                        fs.unlinkSync(__METADATAPATH);
 
                     res.status(500).send({success: false, exception: error.message});
                 }
