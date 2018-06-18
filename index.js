@@ -3,6 +3,7 @@ const   express = require('express'),
         bodyParser = require('body-parser'),
         __PORT = process.env.PORT || 3005,
         cors = require('cors'),
+        db = require('./core/server/database'),
         app = express();
 
 console.log(`EBS Image Bank initializing...`);  

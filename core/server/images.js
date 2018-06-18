@@ -1,6 +1,7 @@
 module.exports = (app) => {
 
     const fs = require('fs'),
+    Image = require('./models/image'),
     utils = require('./utils')();
 
     const _getMetadataContent = (filename) => {
@@ -47,19 +48,40 @@ module.exports = (app) => {
             if (!fs.existsSync(__RELATIVEFILEPATH)) {
                 res.status(404).send();
             } else {
-                res.contentType('image/jpeg');
                 if(req.query.metadata != undefined) {
                     const __IMAGEDATA = _getImage(__FILENAME);
-                    let _metadata = _getMetadataContent(__FILENAME);
 
-                    res.send({
-                        "metadata": _metadata,                        
-                        "image": new Buffer(__IMAGEDATA).toString('base64')
-                    });
+                    const ImageModel = Image.model;
+                    
+                    ImageModel.where({filename: __FILENAME}).findOne((err, doc) => {
+                            res.send({
+                                "metadata": {
+                                    description: doc.description,
+                                    tags: doc.tags
+                                },                        
+                                "image": new Buffer(__IMAGEDATA).toString('base64')
+                            });
+                        });
                 } else {
+                    res.contentType('image/jpeg');
                     if(req.query.forceDownload != undefined) res.set("Content-Type", "application/octet-stream");
                     res.sendFile(__FULLFILEPATH);
                 }
+            }
+        } catch(error) {
+            res.status(500).send({success: false, exception: error.message});
+        }
+    });
+
+    app.get('/images/search', (req, res, next) => {
+        try {
+            if(!req.query.query) {
+                res.status(401).send({success: false, exception: "Parametros obrigatórios não informados"});
+            } else {
+                const ImageModel = Image.model;
+                ImageModel.find({$or:[{description: { $regex: `.*^${req.query.query}.*`, '$options' : 'i' }}, {tags: { $regex: `.*^${req.query.query}.*`, '$options' : 'i' }}]}, '_id description tags',(err, docs) => {
+                    res.status(200).send({success: true, result: docs});
+                });
             }
         } catch(error) {
             res.status(500).send({success: false, exception: error.message});

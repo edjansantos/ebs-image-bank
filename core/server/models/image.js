@@ -1,5 +1,6 @@
-module.exports = ((mongoose) => {
-    const CategorySchema = require('./category')(mongoose);
+module.exports = (() => {
+    const mongoose = require('mongoose');
+    const CategorySchema = require('./category').schema;
 
     const ImageSchema = new mongoose.Schema({
         category: {
@@ -21,5 +22,5 @@ module.exports = ((mongoose) => {
         }
     });
 
-    return ImageSchema;
-});
+    return {model: mongoose.model('Image', ImageSchema), schema: ImageSchema };
+})();

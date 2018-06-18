@@ -1,6 +1,6 @@
 module.exports = (app) => {
     const multer = require('multer'),
-        db = require('./database'),
+        Image = require('./models/image'),
         uuidv1 = require('uuid/v1'),
         storage = multer.diskStorage({
             destination: function (req, file, cb) {
@@ -35,15 +35,19 @@ module.exports = (app) => {
                             description: req.query.description
                         }
 
-                        const ImageSchema = require('./models/image')(db),
-                        ImageModel = new (db.model('Image', ImageSchema))(metadataContent);
+                        const ImageModel = new Image.model(metadataContent);
 
-                        ImageModel.save();
+                        ImageModel.save(((err) => {
+                            if(!err) {
+                                res.send({success: true});
+                            } else {
+                                res.status(500).send({success: false, message:err});
+                            }
+                        }));
                     }
 
-                    res.send({success: true});
                 } catch(error) {
-                    const __IMAGEPATH = app.ebsSettings.UPLOAD_PATH + req.file.originalname;
+                    const __IMAGEPATH = app.ebsSettings.UPLOAD_PATH + req.file.filename;
                     if (fs.existsSync(__IMAGEPATH)) 
                         fs.unlinkSync(__IMAGEPATH);
 
