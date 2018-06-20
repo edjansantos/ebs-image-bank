@@ -59,3 +59,9 @@ typings/
 
 # next.js build output
 .next
+
+
+core/server/images/*.jpg
+core/server/images/*.jpeg
+core/server/images/*.png
+core/server/images/*.gif

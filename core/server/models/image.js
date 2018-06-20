@@ -1,5 +1,6 @@
 module.exports = (() => {
-    const mongoose = require('mongoose');
+    const mongoose = require('mongoose'),
+    mongoosePaginate = require('mongoose-paginate');
     const CategorySchema = require('./category').schema;
 
     const ImageSchema = new mongoose.Schema({
@@ -21,6 +22,8 @@ module.exports = (() => {
             required: true
         }
     });
+
+    ImageSchema.plugin(mongoosePaginate);
 
     return {model: mongoose.model('Image', ImageSchema), schema: ImageSchema };
 })();

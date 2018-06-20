@@ -89,19 +89,24 @@ module.exports = (app) => {
     });
 
     app.get('/images/list', (req, res, next) => {
-        const path = require('path'),
-            __IMAGESFOLDER = app.ebsSettings.UPLOAD_PATH;
-
+        const _page = req.query.page ? req.query.page : 1;
         let _filesList = [];
 
-        const __FILELIST = fs.readdirSync(__IMAGESFOLDER);
-        
-        __FILELIST.forEach(function (file) {
-                if (utils.getAvailableExtensions().indexOf(path.extname(file).toLowerCase().replace('.','')) >= 0) {
-                    _filesList.push({filename: file, metadata: _getMetadataContent(file)});
-                }
+        const ImageModel = Image.model;
+
+        ImageModel.paginate({}, { select: '_id description tags filename', page: _page, limit: 10 }, function(err, result) {
+            result.docs.forEach(function (file) {
+                _filesList.push({filename: file.filename, 
+                    description: file.description, 
+                    tags: file.tags
+                });
             });
 
-        res.send({"images":_filesList});
+            res.send({"images":_filesList, pagination: {
+                page: result.page,
+                pages: result.pages,
+                total: result.total
+            }});
+          });
     });    
 };
