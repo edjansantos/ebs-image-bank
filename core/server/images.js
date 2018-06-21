@@ -1,13 +1,13 @@
 module.exports = (app) => {
 
     const fs = require('fs'),
-    Image = require('./models/image'),
-    utils = require('./utils')();
+        Image = require('./models/image'),
+        utils = require('./utils')();
 
     const _getMetadataContent = (filename) => {
         const __RELATIVEMETADATAFILEPATH = app.ebsSettings.UPLOAD_PATH + utils.generateMetadataFilename(filename);
 
-        if(fs.existsSync(__RELATIVEMETADATAFILEPATH)) {
+        if (fs.existsSync(__RELATIVEMETADATAFILEPATH)) {
             return JSON.parse(fs.readFileSync(__RELATIVEMETADATAFILEPATH, 'utf-8'));
         } else {
             return undefined;
@@ -27,64 +27,83 @@ module.exports = (app) => {
                 sharp = require('sharp');
 
             const __WIDTH = req.query.width ? parseInt(req.query.width) : utils.getDefaultThumbSize().width,
-                 __HEIGHT = req.query.height ?  parseInt(req.query.height) : undefined; 
+                __HEIGHT = req.query.height ? parseInt(req.query.height) : undefined;
             res.type('image/png');
             sharp(_getImage(__FILENAME)).resize(__WIDTH, __HEIGHT).toBuffer().then((data) => {
                 res.send(data);
             });
-        } catch(error) {
+        } catch (error) {
             res.type('json');
-            res.status(500).send({success: false, exception: error.message});
+            res.status(500).send({ success: false, exception: error.message });
         }
     });
-    
+
     app.get('/images/get/:filename', (req, res, next) => {
 
         try {
             const __FILENAME = req.params.filename,
-                 __FULLFILEPATH = __dirname + '/'+ app.ebsSettings.UPLOAD_FOLDER + __FILENAME,
-                 __RELATIVEFILEPATH = app.ebsSettings.UPLOAD_PATH + __FILENAME;
+                __FULLFILEPATH = __dirname + '/' + app.ebsSettings.UPLOAD_FOLDER + __FILENAME,
+                __RELATIVEFILEPATH = app.ebsSettings.UPLOAD_PATH + __FILENAME;
 
             if (!fs.existsSync(__RELATIVEFILEPATH)) {
                 res.status(404).send();
             } else {
-                if(req.query.metadata != undefined) {
+                if (req.query.metadata != undefined) {
                     const __IMAGEDATA = _getImage(__FILENAME);
 
                     const ImageModel = Image.model;
-                    
-                    ImageModel.where({filename: __FILENAME}).findOne((err, doc) => {
-                            res.send({
-                                "metadata": {
-                                    description: doc.description,
-                                    tags: doc.tags
-                                },                        
-                                "image": new Buffer(__IMAGEDATA).toString('base64')
-                            });
+
+                    ImageModel.where({ filename: __FILENAME }).findOne((err, doc) => {
+                        res.send({
+                            "metadata": {
+                                description: doc.description,
+                                tags: doc.tags
+                            },
+                            "image": new Buffer(__IMAGEDATA).toString('base64')
                         });
+                    });
                 } else {
                     res.contentType('image/jpeg');
-                    if(req.query.forceDownload != undefined) res.set("Content-Type", "application/octet-stream");
+                    if (req.query.forceDownload != undefined) res.set("Content-Type", "application/octet-stream");
                     res.sendFile(__FULLFILEPATH);
                 }
             }
-        } catch(error) {
-            res.status(500).send({success: false, exception: error.message});
+        } catch (error) {
+            res.status(500).send({ success: false, exception: error.message });
         }
     });
 
     app.get('/images/search', (req, res, next) => {
         try {
-            if(!req.query.query) {
-                res.status(401).send({success: false, exception: "Parametros obrigatórios não informados"});
-            } else {
-                const ImageModel = Image.model;
-                ImageModel.find({$or:[{description: { $regex: `.*^${req.query.query}.*`, '$options' : 'i' }}, {tags: { $regex: `.*^${req.query.query}.*`, '$options' : 'i' }}]}, '_id description tags',(err, docs) => {
-                    res.status(200).send({success: true, result: docs});
-                });
+            const _page = req.query.page ? req.query.page : 1;
+
+            let _query = {};
+
+            if (req.query.query) {
+                _query = { $or: [{ tags: { $regex: `.*^${req.query.query}.*`, '$options': 'i' } }, { description: { $regex: `.*^${req.query.query}.*`, '$options': 'i' } }] };
             }
-        } catch(error) {
-            res.status(500).send({success: false, exception: error.message});
+            const ImageModel = Image.model;
+            ImageModel.paginate(_query, { select: '_id description tags filename', page: _page, limit: 10 }, (err, result) => {
+                let _filesList = [];
+                result.docs.forEach(function (file) {
+                    _filesList.push({
+                        filename: file.filename,
+                        description: file.description,
+                        tags: file.tags
+                    });
+                });
+
+                res.send({
+                    "images": _filesList, pagination: {
+                        page: result.page,
+                        pages: result.pages,
+                        total: result.total
+                    }
+                });
+            });
+            // }
+        } catch (error) {
+            res.status(500).send({ success: false, exception: error.message });
         }
     });
 
@@ -94,19 +113,22 @@ module.exports = (app) => {
 
         const ImageModel = Image.model;
 
-        ImageModel.paginate({}, { select: '_id description tags filename', page: _page, limit: 10 }, function(err, result) {
+        ImageModel.paginate({}, { select: '_id description tags filename', page: _page, limit: 10 }, function (err, result) {
             result.docs.forEach(function (file) {
-                _filesList.push({filename: file.filename, 
-                    description: file.description, 
+                _filesList.push({
+                    filename: file.filename,
+                    description: file.description,
                     tags: file.tags
                 });
             });
 
-            res.send({"images":_filesList, pagination: {
-                page: result.page,
-                pages: result.pages,
-                total: result.total
-            }});
-          });
-    });    
+            res.status(200).send({
+                "images": _filesList, pagination: {
+                    page: result.page,
+                    pages: result.pages,
+                    total: result.total
+                }
+            });
+        });
+    });
 };

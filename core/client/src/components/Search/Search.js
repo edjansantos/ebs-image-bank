@@ -1,18 +1,18 @@
 import React from 'react';
 
-import './Search.css';
+import './Search.scss';
 
 
 const CardImage = (props) => (
-    
-    <div className="search-box">
-        <form>
-            <label htmlFor="search-query">Busca</label>
-            <br />
-            <input type="search" id="search-query" value={props.query} onChange={props.handleChange.bind(this)}/>
-            <button type="submit">Buscar</button>
-        </form>
-    </div>
+
+    <form noValidate className="d-flex my-2 w-100">
+        <div className="input-group d-flex">
+            <input type="text" className="form-control" placeholder="Buscar imagem" aria-label="Buscar imagem" />
+            <div className="input-group-append">
+                <button className="btn btn-dark" type="button">Buscar</button>
+            </div>
+        </div>
+    </form>
 )
 
 export default CardImage;
