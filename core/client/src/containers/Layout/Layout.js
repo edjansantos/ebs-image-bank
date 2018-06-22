@@ -1,8 +1,11 @@
 import React, { Component } from 'react';
+import { Route } from 'react-router-dom';
 
 import Gallery from '../../components/Gallery/Gallery';
+import Upload from '../../components/Upload/Upload';
 import Header from '../../components/Header/Header';
 import Sidebar from '../../components/Sidebar/Sidebar';
+
 import './Layout.scss';
 
 class Layout extends Component {
@@ -12,13 +15,20 @@ class Layout extends Component {
         this.state = {
             query: undefined
         }
+
+        this.handleQueryChange = this.handleQueryChange.bind(this);
+    }
+
+
+    handleQueryChange(event) {
+        this.setState({ query: event.target.value });
     }
     render() {
         return (
             <div className="contaner-fluid">
                 <div className="row no-gutters">
                     <div className="col-12">
-                        <Header query={this.state.query} />
+                        <Header query={this.state.query} handleQueryChange={this.handleQueryChange}/>
                     </div>
                 </div>
                 <div className="row no-gutters">
@@ -27,7 +37,8 @@ class Layout extends Component {
                     </div>
                     <div className="col">
                         <div className="overflow-box">
-                            <Gallery query={this.state.query} />
+                            <Route path='/' component={() => <Gallery query={this.state.query} />} exact />
+                            <Route path='/upload' component={() => <Upload />} exact />
                         </div>
                     </div>
                 </div>
